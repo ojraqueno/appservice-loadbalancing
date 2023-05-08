@@ -1,6 +1,8 @@
 ﻿// Set up configuration values that control the behavior of the application
+using System.Text.Json;
+
 const int secondsInterval = 2;
-const double secondsDuration = 30;
+const double secondsDuration = 300;
 const string apiUrl = "https://app-myapi.azurewebsites.net/";
 
 var httpClient = new HttpClient { BaseAddress = new Uri(apiUrl) };
@@ -14,20 +16,24 @@ Console.WriteLine("waiting     : waiting");
 // Periodically call the API and write out the response, noting the instance count
 while (await timer.WaitForNextTickAsync())
 {
-    var rawResponse = await httpClient.GetAsync("/ping");
-    var content = await rawResponse.Content.ReadAsStringAsync();
-    var response = System.Text.Json.JsonSerializer.Deserialize<Response>(content);
-    if (response == null || string.IsNullOrWhiteSpace(response.instanceId)) continue;
+    Response? response;
+    try
+    {
+        var rawResponse = await httpClient.GetAsync("/ping");
+        var content = await rawResponse.Content.ReadAsStringAsync();
+        response = JsonSerializer.Deserialize<Response>(content);
+    }
+    catch (Exception)
+    {
+        continue;
+    }
+    
+    if (response == null || string.IsNullOrWhiteSpace(response.instanceId)) throw new InvalidOperationException("Invalid response.");
 
     if (!instanceIdCount.ContainsKey(response.instanceId)) instanceIdCount.Add(response.instanceId, 1);
     else instanceIdCount[response.instanceId]++;
 
-    Console.Clear();
-    Console.WriteLine("Instance Id                                                      : Response Count From Instance");
-    foreach (var kvp in instanceIdCount)
-    {
-        Console.WriteLine($"{kvp.Key} : {kvp.Value}");
-    }
+    WriteInstanceCounts(instanceIdCount);
 
     if (DateTime.Now > stopTime)
     {
@@ -36,6 +42,16 @@ while (await timer.WaitForNextTickAsync())
 }
 
 Console.WriteLine("End");
+
+void WriteInstanceCounts(Dictionary<string, int> instanceIdCount)
+{
+    Console.Clear();
+    Console.WriteLine("Instance Id                                                      : Response Count From Instance");
+    foreach (var kvp in instanceIdCount)
+    {
+        Console.WriteLine($"{kvp.Key} : {kvp.Value}");
+    }
+}
 
 public class Response
 {
