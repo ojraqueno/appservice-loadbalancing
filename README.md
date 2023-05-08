@@ -5,8 +5,8 @@ This repository contains code of a sample API system that is successfully load b
 ## source code
 
 The repo contains two projects:
-- An API application
-- A console application
+- An API application (MyAPI)
+- A console application (Pinger)
 
 The API application contains a single GET endpoint which returns the instance id of the API that is currently responding to the request.
 
